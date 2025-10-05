@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chat App (Polling)</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 20px;
+        }
+
+        #chat-box {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        #message-input {
+            width: 80%;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>💬 Chat Room (Polling)</h2>
+    <div id="chat-box"></div>
+    <input type="text" id="message-input" placeholder="메시지를 입력하세요...">
+    <button onclick="sendMessage()">보내기</button>
+
+
+    <script>
+        const token = localStorage.getItem('access');
+        if (!token) {
+            const username = prompt('Username 입력:');
+            const password = prompt('Password 입력:');
+            fetch('/api/token/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    localStorage.setItem('access', data.access);
+                    location.reload();
+                });
+        }
+
+        function loadMessages() {
+            fetch('/chat/poll/')  // 헤더 제거
+                .then(res => res.json())
+                .then(data => {
+                    if (!Array.isArray(data)) return; // 에러 객체면 무시
+                    const box = document.getElementById('chat-box');
+                    box.innerHTML = data.map(m => `<p><b>${m.username}</b>: ${m.text}</p>`).join('');
+                })
+                .catch(err => console.error(err));
+        }
+
+
+        function sendMessage() {
+            const text = document.getElementById('message-input').value;
+            const username = prompt("사용자 이름 입력:", "익명");
+
+            fetch('/chat/send/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },  // Authorization 제거
+                body: JSON.stringify({ text, username })
+            })
+                .then(() => {
+                    document.getElementById('message-input').value = '';
+                    loadMessages();
+                })
+                .catch(err => console.error(err));
+        }
+
+
+        setInterval(loadMessages, 3000);
+        loadMessages();
+    </script>
+</body>
+
+</html>
