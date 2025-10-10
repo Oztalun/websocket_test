@@ -35,17 +35,17 @@ def signup_view(request):
 
 # 메시지 폴링 API
 @api_view(['GET'])
-@login_required
+# @permission_classes([IsAuthenticated])
 def poll_messages(request):
-    last_update_time = timezone.now()
-    messages = ChatMessage.objects.all().order_by('-id')[:20]
-    serializer = MessageSerializer(messages, many=True)
-    return Response(serializer.data)
+    return Response({"status": "ok", "code": last_message}, status=200)
+
+global last_message
 
 # 메시지 전송 API -------------------------------------------------------
 @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 def send_message(request):
+    global last_message
     print("test")
     host = request.data.get('host')
     text = request.data.get('text')
@@ -59,8 +59,8 @@ def send_message(request):
     elif len(text) > 20:
         return Response({'error': 'Host exceeds maximum length of 20'}, status=400)
     elif "yy" in text:# 마지막 명령어 저장
-        last_message = ChatMessage.objects.order_by('-timestamp').first()
-        print(f"마지막 명령어 = {last_message}")
+        last_message = ChatMessage.objects.order_by('-timestamp').first().text
+        return Response({"host":host, "text":text, "last_message":str(last_message)}, status=201)
     else:
         message = ChatMessage.objects.create(host=host, text=text)
         return Response({"host":host, "text":text}, status=201)
