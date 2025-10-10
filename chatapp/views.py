@@ -7,6 +7,9 @@ from rest_framework.response import Response
 from .models import Message as ChatMessage
 from .serializers import MessageSerializer
 from django.contrib.auth import login, authenticate
+from django.http import JsonResponse
+from django.utils import timezone
+import datetime
 
 # 채팅 페이지
 @login_required
@@ -34,19 +37,30 @@ def signup_view(request):
 @api_view(['GET'])
 @login_required
 def poll_messages(request):
+    last_update_time = timezone.now()
     messages = ChatMessage.objects.all().order_by('-id')[:20]
     serializer = MessageSerializer(messages, many=True)
     return Response(serializer.data)
 
-# 메시지 전송 API
+# 메시지 전송 API -------------------------------------------------------
 @api_view(['POST'])
-@login_required
+# @permission_classes([IsAuthenticated])
 def send_message(request):
-    username = request.user.username  # 로그인한 사용자 이름
+    print("test")
+    host = request.data.get('host')
     text = request.data.get('text')
-    if not text:
+    print(f"{host}    {text}")
+    if not host:
         return Response({'error': 'Text is required'}, status=400)
-
-    message = ChatMessage.objects.create(username=username, text=text)
-    serializer = MessageSerializer(message)
-    return Response(serializer.data)
+    elif not text:
+        return Response({'error': 'Host is required'}, status=400)
+    elif len(host) > 50:
+        return Response({'error': 'Text exceeds maximum length of 50'}, status=400)
+    elif len(text) > 20:
+        return Response({'error': 'Host exceeds maximum length of 20'}, status=400)
+    elif "yy" in text:# 마지막 명령어 저장
+        last_message = ChatMessage.objects.order_by('-timestamp').first()
+        print(f"마지막 명령어 = {last_message}")
+    else:
+        message = ChatMessage.objects.create(host=host, text=text)
+        return Response({"host":host, "text":text}, status=201)

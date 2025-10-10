@@ -6,11 +6,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    # 채팅 메시지 API
+    path('', include('chatapp.urls')),
     path('admin/', admin.site.urls),
 
 
-    # 채팅 메시지 API
-    path('chat/', include('chatapp.urls')),
 ]
 
 if settings.DEBUG:
