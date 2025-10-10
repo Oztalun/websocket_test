@@ -1,85 +1,114 @@
-<!DOCTYPE html>
-<html lang="ko">
+{% load static %}
 
 <head>
-    <meta charset="UTF-8">
     <title>Chat App (Polling)</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LED 제어</title>
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             padding: 20px;
         }
 
-        #chat-box {
-            height: 300px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
+        input,
+        button {
+            font-size: 1rem;
             padding: 10px;
-            margin-bottom: 10px;
+            margin: 5px 0;
         }
 
-        #message-input {
-            width: 80%;
+        #log {
+            margin-top: 20px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .entry {
+            margin-bottom: 5px;
         }
     </style>
 </head>
 
 <body>
-    <h2>💬 Chat Room (Polling)</h2>
-    <div id="chat-box"></div>
-    <input type="text" id="message-input" placeholder="메시지를 입력하세요...">
-    <button onclick="sendMessage()">보내기</button>
 
+    <h1>LED 제어 모바일</h1>
+
+    <label>명령 입력:</label><br>
+    <input type="text" id="commandInput" placeholder="예: LED ON"><br>
+    <button onclick="sendCommand()">전송</button>
+
+    <div id="log">
+        <h3>상태 로그</h3>
+    </div>
 
     <script>
-        const token = localStorage.getItem('access');
-        if (!token) {
-            const username = prompt('Username 입력:');
-            const password = prompt('Password 입력:');
-            fetch('/api/token/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    localStorage.setItem('access', data.access);
-                    location.reload();
+        const logDiv = document.getElementById('log');
+
+        function addLog(message) {
+            const div = document.createElement('div');
+            div.className = 'entry';
+            div.textContent = message;
+            logDiv.appendChild(div);
+        }
+
+        // API 호출 함수
+        async function sendCommand() {
+            const commandText = document.getElementById('commandInput').value.trim();
+            if (!commandText) {
+                alert('명령을 입력하세요.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/device/send/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 인증이 필요하면 아래에 토큰 추가
+                        // 'Authorization': 'Bearer <JWT>'
+                    },
+                    body: JSON.stringify({ command: commandText })
                 });
+
+                const data = await response.json();
+                if (response.ok) {
+                    addLog(`성공: ${data.source} -> ${data.target}: ${data.command} (${data.status})`);
+                } else {
+                    addLog(`실패: ${data.error || '알 수 없는 오류'}`);
+                }
+            } catch (err) {
+                addLog(`오류: ${err}`);
+            }
+
+            document.getElementById('commandInput').value = '';
         }
 
-        function loadMessages() {
-            fetch('/chat/poll/')  // 헤더 제거
-                .then(res => res.json())
-                .then(data => {
-                    if (!Array.isArray(data)) return; // 에러 객체면 무시
-                    const box = document.getElementById('chat-box');
-                    box.innerHTML = data.map(m => `<p><b>${m.username}</b>: ${m.text}</p>`).join('');
-                })
-                .catch(err => console.error(err));
+        // 주기적으로 상태 가져오기 (선택)
+        async function pollStatus() {
+            try {
+                const response = await fetch('/api/device/status/', {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 인증이 필요하면 아래에 토큰 추가
+                        // 'Authorization': 'Bearer <JWT>'
+                    }
+                });
+                const data = await response.json();
+                logDiv.innerHTML = '<h3>상태 로그</h3>'; // 초기화
+                data.forEach(cmd => {
+                    addLog(`${cmd.source} -> ${cmd.target}: ${cmd.command} (${cmd.status})`);
+                });
+            } catch (err) {
+                addLog(`상태 가져오기 오류: ${err}`);
+            }
         }
 
-
-        function sendMessage() {
-            const text = document.getElementById('message-input').value;
-            const username = prompt("사용자 이름 입력:", "익명");
-
-            fetch('/chat/send/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },  // Authorization 제거
-                body: JSON.stringify({ text, username })
-            })
-                .then(() => {
-                    document.getElementById('message-input').value = '';
-                    loadMessages();
-                })
-                .catch(err => console.error(err));
-        }
-
-
-        setInterval(loadMessages, 3000);
-        loadMessages();
+        // 3초마다 상태 갱신
+        setInterval(pollStatus, 3000);
     </script>
+
 </body>
 
 </html>
