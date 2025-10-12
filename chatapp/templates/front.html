@@ -1,0 +1,92 @@
+{% load static %}
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>POST & 폴링 테스트</title>
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon"><!DOCTYPE html>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 15px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        pre {
+            background: #f2f2f2;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h2>POST 요청 및 폴링 테스트</h2>
+
+    <div id="buttons"></div>
+    <pre id="result"></pre>
+    <pre id="status"></pre>
+
+    <script>
+        const SERVER_URL = "{{ server_url }}";
+        const sendUrl = SERVER_URL + "send/";
+        const statusUrl = SERVER_URL +  "status/";
+        const host = "mobile";
+        const resultBox = document.getElementById("result");
+        const statusBox = document.getElementById("status");
+        const buttonsContainer = document.getElementById("buttons");
+
+        // ✅ 1) 버튼 자동 생성
+        for (let i = 1; i <= 7; i++) {
+            const num = String(i).padStart(2, '0');  // 01, 02, 03...
+            const text = `sp ${num}.bin`;
+
+            const btn = document.createElement("button");
+            btn.textContent = text;
+
+            btn.addEventListener("click", async () => {
+                try {
+                    const response = await fetch(sendUrl, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ host, text })
+                    });
+
+                    const data = await response.json();
+                    resultBox.innerText =
+                        `✅ [${text}] 전송 결과:\n` + JSON.stringify(data, null, 2);
+                } catch (err) {
+                    resultBox.innerText = `❌ 오류 발생 (${text}): ${err}`;
+                }
+            });
+
+            buttonsContainer.appendChild(btn);
+        }
+
+        // ✅ 2) 1초마다 /status/에서 폴링
+        async function pollStatus() {
+            try {
+                const res = await fetch(statusUrl);
+                const data = await res.json();
+                statusBox.innerText = `📡 서버 상태 (${new Date().toLocaleTimeString()}):\n`
+                    + JSON.stringify(data, null, 2);
+            } catch (err) {
+                statusBox.innerText = `⚠️ 상태 요청 실패: ${err}`;
+            }
+        }
+
+        // 1초마다 실행
+        setInterval(pollStatus, 1000);
+    </script>
+</body>
+</html>
