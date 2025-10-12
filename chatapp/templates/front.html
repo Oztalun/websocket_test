@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>POST & 폴링 테스트</title>
-    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon"><!DOCTYPE html>
+    <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
     <style>
         body {
             font-family: sans-serif;
@@ -28,27 +28,42 @@
             border-radius: 6px;
             margin-top: 15px;
         }
+        #server-info {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <h2>POST 요청 및 폴링 테스트</h2>
+    <div id="server-info"></div>
 
     <div id="buttons"></div>
     <pre id="result"></pre>
     <pre id="status"></pre>
 
     <script>
-        const SERVER_URL = "{{ server_url }}";
-        const sendUrl = SERVER_URL + "send/";
-        const statusUrl = SERVER_URL +  "status/";
+        // ✅ Django에서 서버 주소 주입
+        const SERVER_URL = "{{ server_url|default:'http://127.0.0.1:8000/api/' }}";
+
+        // ✅ URL 끝에 슬래시 중복 방지
+        const baseUrl = SERVER_URL.endsWith("/") ? SERVER_URL : SERVER_URL + "/";
+        const sendUrl = baseUrl + "send/";
+        const statusUrl = baseUrl + "status/";
+
         const host = "mobile";
         const resultBox = document.getElementById("result");
         const statusBox = document.getElementById("status");
         const buttonsContainer = document.getElementById("buttons");
+        const infoBox = document.getElementById("server-info");
 
-        // ✅ 1) 버튼 자동 생성
+        // ✅ 서버 URL 표시
+        infoBox.innerHTML = `서버 요청 주소: <b>${baseUrl}</b>`;
+
+        // ✅ 버튼 자동 생성
         for (let i = 1; i <= 7; i++) {
-            const num = String(i).padStart(2, '0');  // 01, 02, 03...
+            const num = String(i).padStart(2, '0');
             const text = `sp ${num}.bin`;
 
             const btn = document.createElement("button");
@@ -62,30 +77,36 @@
                         body: JSON.stringify({ host, text })
                     });
 
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const data = await response.json();
+
                     resultBox.innerText =
                         `✅ [${text}] 전송 결과:\n` + JSON.stringify(data, null, 2);
                 } catch (err) {
                     resultBox.innerText = `❌ 오류 발생 (${text}): ${err}`;
+                    console.error(err);
                 }
             });
 
             buttonsContainer.appendChild(btn);
         }
 
-        // ✅ 2) 1초마다 /status/에서 폴링
+        // ✅ 상태 폴링
         async function pollStatus() {
             try {
                 const res = await fetch(statusUrl);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
+
                 statusBox.innerText = `📡 서버 상태 (${new Date().toLocaleTimeString()}):\n`
                     + JSON.stringify(data, null, 2);
             } catch (err) {
                 statusBox.innerText = `⚠️ 상태 요청 실패: ${err}`;
+                console.warn("상태 요청 실패:", err);
             }
         }
 
-        // 1초마다 실행
+        // 1초마다 상태 확인
         setInterval(pollStatus, 1000);
     </script>
 </body>
