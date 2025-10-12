@@ -57,20 +57,26 @@
 <body>
     <h2>POST 요청 및 폴링 테스트</h2>
 
-    <!-- 버튼 컨테이너 -->
-    <div id="buttons"></div>
+    <!-- 전송 버튼 -->
+    <div id="buttons">
+        <button data-text="sp 01.bin">sp 01.bin</button>
+        <button data-text="sp 02.bin">sp 02.bin</button>
+        <button data-text="sp 03.bin">sp 03.bin</button>
+        <button data-text="sp 04.bin">sp 04.bin</button>
+        <button data-text="sp 05.bin">sp 05.bin</button>
+        <button data-text="sp 06.bin">sp 06.bin</button>
+        <button data-text="sp 07.bin">sp 07.bin</button>
+    </div>
 
-    <!-- 폴링 ON/OFF -->
+    <!-- 폴링 토글 버튼 -->
     <div id="poll-control">
-        <button id="poll-on">폴링 ON</button>
-        <button id="poll-off" class="off">폴링 OFF</button>
+        <button id="poll-toggle">폴링 OFF</button>
     </div>
 
     <pre id="result"></pre>
     <pre id="status"></pre>
 
     <script>
-        // Django에서 서버 주소 주입
         const SERVER_URL = "{{ server_url|default:'http://127.0.0.1:8000/' }}";
         const baseUrl = SERVER_URL.endsWith("/") ? SERVER_URL : SERVER_URL + "/";
         const sendUrl = baseUrl + "send/";
@@ -79,39 +85,33 @@
         const host = "mobile";
         const resultBox = document.getElementById("result");
         const statusBox = document.getElementById("status");
-        const buttonsContainer = document.getElementById("buttons");
 
-        // ✅ 버튼 자동 생성
-        for (let i = 1; i <= 7; i++) {
-            const num = String(i).padStart(2, '0');
-            const text = `sp ${num}.bin`;
-
-            const btn = document.createElement("button");
-            btn.textContent = text;
-
+        // 전송 버튼 클릭 이벤트
+        document.querySelectorAll("#buttons button").forEach(btn => {
             btn.addEventListener("click", async () => {
+                const text = btn.dataset.text;
                 try {
                     const response = await fetch(sendUrl, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ host, text })
                     });
+                    const data = await response.json().catch(() => null);
 
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
+                    if (!response.ok) {
+                        const msg = data?.error || response.statusText;
+                        resultBox.innerText = `❌ 오류 발생 (${text}): HTTP ${response.status} - ${msg}`;
+                        return;
+                    }
 
-                    resultBox.innerText =
-                        `✅ [${text}] 전송 결과:\n` + JSON.stringify(data, null, 2);
+                    resultBox.innerText = `✅ [${text}] 전송 결과:\n` + JSON.stringify(data, null, 2);
                 } catch (err) {
-                    resultBox.innerText = `❌ 오류 발생 (${text}): ${err}`;
-                    console.error(err);
+                    resultBox.innerText = `❌ 요청 실패 (${text}): ${err}`;
                 }
             });
+        });
 
-            buttonsContainer.appendChild(btn);
-        }
-
-        // ✅ 상태 폴링
+        // 폴링
         let pollInterval = null;
 
         async function pollStatus() {
@@ -119,7 +119,6 @@
                 const res = await fetch(statusUrl);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
-
                 statusBox.innerText = `📡 서버 상태 (${new Date().toLocaleTimeString()}):\n`
                     + JSON.stringify(data, null, 2);
             } catch (err) {
@@ -127,20 +126,20 @@
             }
         }
 
-        // 폴링 ON/OFF 버튼
-        document.getElementById("poll-on").addEventListener("click", () => {
-            if (!pollInterval) {
-                pollStatus(); // 즉시 호출
-                pollInterval = setInterval(pollStatus, 1000);
-            }
-        });
-
-        document.getElementById("poll-off").addEventListener("click", () => {
+        // 폴링 토글 버튼
+        const pollToggleBtn = document.getElementById("poll-toggle");
+        pollToggleBtn.addEventListener("click", () => {
             if (pollInterval) {
                 clearInterval(pollInterval);
                 pollInterval = null;
+                pollToggleBtn.innerText = "폴링 OFF";
+            } else {
+                pollStatus();
+                pollInterval = setInterval(pollStatus, 1000);
+                pollToggleBtn.innerText = "폴링 ON";
             }
         });
+
     </script>
 </body>
 </html>

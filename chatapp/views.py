@@ -15,9 +15,6 @@ from dotenv import load_dotenv
 load_dotenv()
 server_url = os.getenv("SERVER_URL")
 
-
-from django.views.decorators.csrf import csrf_exempt
-
 # # 채팅 페이지
 # @login_required
 # def chat_home(request):
@@ -65,7 +62,6 @@ def poll_messages(request):
 
 
 # 메시지 전송 API -------------------------------------------------------
-@csrf_exempt
 @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 def send_message(request):
@@ -103,7 +99,7 @@ def send_message(request):
         print(f"host: {last_message.host}, text: {last_message.text}, is_working: {last_message.is_working}")
         return Response({"is_working":last_message.is_working}, status=201)
     elif (timezone.now() - last_message.timestamp) < datetime.timedelta(seconds=10):#10초 이내에 다시 요청이 오면
-        return Response({'error': 'Please wait before sending another message'}, status=400)
+        return Response({'error': 'Please wait before sending another message'}, status=200)#400 하니까 html에 안나옴 ㅋㅋㅋ
     else:
         last_message.is_working = False
         last_message.save()
