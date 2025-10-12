@@ -56,7 +56,7 @@ def poll_messages(request):
         message.is_working = False
         message.save()
         print("failed to get result code in time, set is_working to False")
-        return Response({'error': 'No new messages'}, status=200)
+        return Response({"host":message.host, "text":message.text, "is_working":message.is_working, "answer_time": message.timestamp, 'ps':'timeout, false due to failure'}, status=200)
     print('대답 대기중\n')
     return Response({"status": "ok", "value": message.is_working, "code": message.text}, status=200)
 
