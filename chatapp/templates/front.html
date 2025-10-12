@@ -71,7 +71,7 @@
 
     <script>
         // Django에서 서버 주소 주입
-        const SERVER_URL = "{{ server_url|default:'http://127.0.0.1:8000/api/' }}";
+        const SERVER_URL = "{{ server_url|default:'http://127.0.0.1:8000/' }}";
         const baseUrl = SERVER_URL.endsWith("/") ? SERVER_URL : SERVER_URL + "/";
         const sendUrl = baseUrl + "send/";
         const statusUrl = baseUrl + "status/";
