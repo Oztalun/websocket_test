@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <title>POST & 폴링 테스트</title>
     <link rel="icon" href="{% static 'favicon.ico' %}" type="image/x-icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: sans-serif;
-            padding: 20px;
+            padding: 15px;
+            max-width: 500px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
         }
         button {
-            margin: 5px;
+            margin: 5px 3px;
             padding: 10px 15px;
             font-size: 16px;
             border-radius: 6px;
@@ -18,36 +24,54 @@
             background-color: #007bff;
             color: white;
             border: none;
+            flex: 1;
+            min-width: 80px;
         }
         button:hover {
             background-color: #0056b3;
+        }
+        #buttons, #poll-control {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 15px;
         }
         pre {
             background: #f2f2f2;
             padding: 10px;
             border-radius: 6px;
-            margin-top: 15px;
+            margin-top: 10px;
+            overflow-x: auto;
         }
-        #server-info {
-            color: #555;
-            font-size: 14px;
-            margin-bottom: 10px;
+        #poll-control button {
+            background-color: #28a745;
+        }
+        #poll-control button.off {
+            background-color: #dc3545;
+        }
+        #poll-control button:hover {
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
     <h2>POST 요청 및 폴링 테스트</h2>
-    <div id="server-info"></div>
 
+    <!-- 버튼 컨테이너 -->
     <div id="buttons"></div>
+
+    <!-- 폴링 ON/OFF -->
+    <div id="poll-control">
+        <button id="poll-on">폴링 ON</button>
+        <button id="poll-off" class="off">폴링 OFF</button>
+    </div>
+
     <pre id="result"></pre>
     <pre id="status"></pre>
 
     <script>
-        // ✅ Django에서 서버 주소 주입
+        // Django에서 서버 주소 주입
         const SERVER_URL = "{{ server_url|default:'http://127.0.0.1:8000/api/' }}";
-
-        // ✅ URL 끝에 슬래시 중복 방지
         const baseUrl = SERVER_URL.endsWith("/") ? SERVER_URL : SERVER_URL + "/";
         const sendUrl = baseUrl + "send/";
         const statusUrl = baseUrl + "status/";
@@ -56,10 +80,6 @@
         const resultBox = document.getElementById("result");
         const statusBox = document.getElementById("status");
         const buttonsContainer = document.getElementById("buttons");
-        const infoBox = document.getElementById("server-info");
-
-        // ✅ 서버 URL 표시
-        infoBox.innerHTML = `서버 요청 주소: <b>${baseUrl}</b>`;
 
         // ✅ 버튼 자동 생성
         for (let i = 1; i <= 7; i++) {
@@ -92,6 +112,8 @@
         }
 
         // ✅ 상태 폴링
+        let pollInterval = null;
+
         async function pollStatus() {
             try {
                 const res = await fetch(statusUrl);
@@ -102,12 +124,23 @@
                     + JSON.stringify(data, null, 2);
             } catch (err) {
                 statusBox.innerText = `⚠️ 상태 요청 실패: ${err}`;
-                console.warn("상태 요청 실패:", err);
             }
         }
 
-        // 1초마다 상태 확인
-        setInterval(pollStatus, 1000);
+        // 폴링 ON/OFF 버튼
+        document.getElementById("poll-on").addEventListener("click", () => {
+            if (!pollInterval) {
+                pollStatus(); // 즉시 호출
+                pollInterval = setInterval(pollStatus, 1000);
+            }
+        });
+
+        document.getElementById("poll-off").addEventListener("click", () => {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        });
     </script>
 </body>
 </html>
