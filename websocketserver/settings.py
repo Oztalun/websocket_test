@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     # Third-party apps
     'rest_framework',
     'rest_framework_simplejwt',
+    "corsheaders",
     # my apps
     'chatapp',
 ]
@@ -43,6 +44,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# cors추가
+MIDDLEWARE.insert(0, "corsheaders.middleware.CorsMiddleware")
+# 🔓 테스트 중일 때만 전체 허용 (실서비스는 특정 주소만)
+CORS_ALLOW_ALL_ORIGINS = True
 
 ROOT_URLCONF = 'websocketserver.urls'
 
