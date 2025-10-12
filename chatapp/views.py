@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 load_dotenv()
 server_url = os.getenv("SERVER_URL")
 
+
+from django.views.decorators.csrf import csrf_exempt
+
 # # 채팅 페이지
 # @login_required
 # def chat_home(request):
@@ -62,6 +65,7 @@ def poll_messages(request):
 
 
 # 메시지 전송 API -------------------------------------------------------
+@csrf_exempt
 @api_view(['POST'])
 # @permission_classes([IsAuthenticated])
 def send_message(request):
