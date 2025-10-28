@@ -1,6 +1,9 @@
 */migrations/*.py
 !*/migrations/__init__.py
 
+Device_authentication
+
+
 # Created by https://www.toptal.com/developers/gitignore/api/django,python,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=django,python,windows
 

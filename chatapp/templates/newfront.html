@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>조명 제어 패널 - 4개 그룹 UI</title>
+<style>
+  :root{
+    --bg:#0f1724;
+    --card:#0b1220;
+    --muted:#9aa4b2;
+    --accent:#ffd166;
+    --accent-2:#ffb703;
+    --btn-bg:#142033;
+    --btn-active:#1f7a8c;
+    --radius:12px;
+    --gap:10px;
+    font-family: "Noto Sans KR", sans-serif;
+  }
+  body{
+    margin:0;
+    background:linear-gradient(180deg,var(--bg),#08101a);
+    color:#e6eef6;
+    display:flex;
+    justify-content:center;
+    padding:20px;
+  }
+  .wrap{
+    width:100%;
+    max-width:420px;
+    background:rgba(10,15,25,0.6);
+    border-radius:16px;
+    padding:16px;
+    box-shadow:0 10px 30px rgba(2,6,12,0.5);
+    backdrop-filter:blur(6px);
+  }
+  h2{
+    margin:16px 0 8px 0;
+    font-size:15px;
+    color:var(--accent);
+    border-bottom:1px solid rgba(255,255,255,0.1);
+    padding-bottom:4px;
+  }
+  /* 버튼 공통 */
+  button{
+    all:unset;
+    box-sizing:border-box;
+    cursor:pointer;
+    border-radius:var(--radius);
+    background:var(--btn-bg);
+    text-align:center;
+    color:#fff;
+    font-size:14px;
+    padding:12px;
+    transition:all .12s ease;
+    border:1px solid rgba(255,255,255,0.05);
+  }
+  button:active{transform:scale(0.97)}
+  button.active{
+    background:linear-gradient(180deg,#1f7a8c,#18485a);
+    box-shadow:0 0 10px rgba(31,122,140,0.4);
+  }
+  /* 그리드 그룹 */
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:var(--gap);
+  }
+  /* 조명 밝기 (가로 스크롤) */
+  .scroll{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    padding-bottom:8px;
+  }
+  .scroll button{
+    min-width:64px;
+    flex:0 0 auto;
+  }
+  .scroll::-webkit-scrollbar{height:6px}
+  .scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:6px}
+  /* 하단 고정 버튼 */
+  .bottom-bar{
+    position:fixed;
+    bottom:16px;
+    left:50%;
+    transform:translateX(-50%);
+    width:calc(100% - 40px);
+    max-width:420px;
+    display:flex;
+    gap:10px;
+  }
+  .fab{
+    flex:1;
+    height:52px;
+    background:linear-gradient(90deg,#2e7a4f,#1b8f66);
+    border:none;
+    border-radius:14px;
+    color:white;
+    font-weight:600;
+  }
+  .fab.off{background:linear-gradient(90deg,#7a2a2a,#862f2f);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>이벤트 제어</h2>
+    <div class="grid" id="buttons">
+      <button data-text="sp 02.bin">랜덤</button>
+      <button data-text="sp 06.bin">파도타기</button>
+      <button data-text="sp 07.bin">지퍼</button>
+      <button data-text="sp 08.bin">줌 인/아웃</button>
+      <button data-text="sp 09.bin">트윙클</button>
+      <button data-text="sp 11.bin">카운트다운</button>
+      <button data-text="sp 12.bin">전체 ON/OFF</button>
+    </div>
+
+    <h2>사용자 개별 제어</h2>
+    <div class="grid" id="buttons">
+      <button data-text="sp 14.bin">천천히 점등</button>
+      <button data-text="sp 15.bin">천천히 소등</button>
+    </div>
+
+    <h2>조명 밝기 제어</h2>
+    <div class="scroll" id="buttons">
+      <!-- 11단계 -->
+      <button data-text="sp 16.bin">0%</button>
+      <button data-text="sp 17.bin">10%</button>
+      <button data-text="sp 18.bin">20%</button>
+      <button data-text="sp 19.bin">30%</button>
+      <button data-text="sp 20.bin">40%</button>
+      <button data-text="sp 21.bin">50%</button>
+      <button data-text="sp 22.bin">60%</button>
+      <button data-text="sp 23.bin">70%</button>
+      <button data-text="sp 24.bin">80%</button>
+      <button data-text="sp 25.bin">90%</button>
+      <button data-text="sp 26.bin">100%</button>
+    </div>
+
+    <h2>조명 처리 제어</h2>
+    <div class="grid" id="buttons">
+      <button data-text="sp 27.bin">천천히 점등</button>
+      <button data-text="sp 28.bin">즉시 점등</button>
+      <button data-text="sp 29.bin">천천히 소등</button>
+      <button data-text="sp 30.bin">즉시 소등</button>
+    </div>
+    <!-- 폴링 토글 버튼 -->
+    <h2>폴링 제어</h2>
+    <div style="text-align: center;" id="poll-control">
+      <button id="poll-toggle" style="width: 90%;">폴링 OFF</button>
+      <pre style="width: 90%; margin: 0 auto;" id="result">ready</pre>
+      <pre style="width: 90%; margin: 0 auto;" id="status">ready</pre>
+    </div>
+
+
+  </div>
+
+<script>
+  const SERVER_URL = "{{ server_url|default:'http://127.0.0.1:8000/' }}";
+  const baseUrl = SERVER_URL.endsWith("/") ? SERVER_URL : SERVER_URL + "/";
+  const sendUrl = baseUrl + "send/";
+  const statusUrl = baseUrl + "status/";
+
+  const host = "mobile";
+  const resultBox = document.getElementById("result");
+  const statusBox = document.getElementById("status");
+
+  // 전송 버튼 클릭 이벤트
+  document.querySelectorAll("#buttons button").forEach(btn => {
+      btn.addEventListener("click", async () => {
+          const text = btn.dataset.text;
+          try {
+              const response = await fetch(sendUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ host, text })
+              });
+              const data = await response.json().catch(() => null);
+
+              if (!response.ok) {
+                  const msg = data?.error || response.statusText;
+                  resultBox.innerText = `❌ 오류 발생 (${text}): HTTP ${response.status} - ${msg}`;
+                  return;
+              }
+
+              resultBox.innerText = `✅ [${text}] 전송 결과:\n` + JSON.stringify(data, null, 2);
+          } catch (err) {
+              resultBox.innerText = `❌ 요청 실패 (${text}): ${err}`;
+          }
+      });
+  });
+
+  // 폴링
+  let pollInterval = null;
+
+  async function pollStatus() {
+      try {
+          const res = await fetch(statusUrl);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          statusBox.innerText = `📡 서버 상태 (${new Date().toLocaleTimeString()}):\n`
+              + JSON.stringify(data, null, 2);
+      } catch (err) {
+          statusBox.innerText = `⚠️ 상태 요청 실패: ${err}`;
+      }
+  }
+
+  // 폴링 토글 버튼
+  const pollToggleBtn = document.getElementById("poll-toggle");
+  pollToggleBtn.addEventListener("click", () => {
+      if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+          pollToggleBtn.innerText = "폴링 OFF";
+      } else {
+          pollStatus();
+          pollInterval = setInterval(pollStatus, 1000);
+          pollToggleBtn.innerText = "폴링 ON";
+      }
+  });
+
+</script>
+<script>
+  // 모든 버튼 (4개 그룹 전체)
+  const allButtons = document.querySelectorAll( "#buttons button" );
+
+  let selectedButton = null;
+
+  allButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // 이미 선택된 버튼을 다시 클릭한 경우
+      if (btn === selectedButton) {
+        // 일단 해제
+        btn.classList.remove('active');
+        console.log('해제:', btn.textContent);
+
+        // 잠시 후 다시 선택 (0.2초 후)
+        setTimeout(() => {
+          btn.classList.add('active');
+          console.log('다시 선택:', btn.textContent);
+        }, 200);
+
+        return;
+      }
+
+      // 다른 버튼 클릭 시 이전 선택 해제
+      if (selectedButton) selectedButton.classList.remove('active');
+
+      // 새 버튼 선택
+      btn.classList.add('active');
+      selectedButton = btn;
+      console.log('선택:', btn.textContent);
+    });
+  });
+</script>
+
+</body>
+</html>

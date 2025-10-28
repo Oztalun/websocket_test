@@ -110,7 +110,7 @@ def send_message(request):
 @api_view(['GET'])
 # @permission_classes([IsAuthenticated])
 def view_message(request):
-    return render(request, 'front.html', {"server_url": server_url})
+    return render(request, 'newfront.html', {"server_url": server_url})
 
 def check_message():
     global last_message
